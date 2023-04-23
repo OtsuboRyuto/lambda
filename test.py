@@ -1,28 +1,30 @@
 import boto3
 
-pricing_client = boto3.client('pricing', region_name='us-east-1')
+ec2 = boto3.client('ec2')
+savingsplans = boto3.client('savingsplans')
 
-response = pricing_client.get_products(
-    ServiceCode='AmazonEC2',
-    Filters=[
-        {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': 't2.micro'},
-        {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'}
-    ],
-    MaxResults=1
-)
+def get_instance_savings_plan_discount(instance_type):
+    # インスタンスタイプに一致する Savings Plan を取得する
+    response = savingsplans.describe_savings_plans_offering_rates(
+        filters=[
+            {
+                'Name': 'productType',
+                'Values': ['EC2 Instance Savings Plan']
+            },
+            {
+                'Name': 'instanceFamily',
+                'Values': [instance_type.split('.')[0]]
+            },
+            {
+                'Name': 'instanceType',
+                'Values': [instance_type]
+            }
+        ]
+    )
 
-product = response['PriceList'][0]['product']
-sku = product['sku']
+    # Savings Plan の割引率を返す
+    return response['SearchResults'][0]['SavingsPlanOfferingRates'][0]['Rate']
 
-price_response = pricing_client.get_products(
-    ServiceCode='AmazonEC2',
-    Skus=[sku]
-)
-
-price_dimension = price_response['PriceList'][0]['terms']['OnDemand'][sku]['priceDimensions']
-
-usd_per_unit = float(price_dimension.values()[0]['pricePerUnit']['USD'])
-
-total_price = usd_per_unit * 100
-
-print(total_price)
+# 例：t2.micro インスタンスタイプの Savings Plans 割引率を取得する
+discount = get_instance_savings_plan_discount('t2.micro')
+print(discount)
