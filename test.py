@@ -2,45 +2,56 @@ import boto3
 import os
 from datetime import datetime, timedelta
 
-ce = boto3.client('ce', region_name=os.environ['AWS_REGION'])
+ce = boto3.client('ce', region_name='us-east-1')
 
-def lambda_handler(event, context):
-    end_date = datetime.utcnow().date()
-    start_date = end_date - timedelta(days=30)
-    instance_family = event.get('instanceFamily', 'a1')
+# 現在時刻の1時間前を取得
+start = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
 
-    results = []
-    token = None
-
-    while True:
-        if token:
-            kwargs = {'NextPageToken': token}
-        else:
-            kwargs = {}
-        
-        response = ce.get_cost_and_usage(
-            TimePeriod={
-                'Start': start_date.isoformat(),
-                'End': end_date.isoformat()
+# クエリパラメータを設定
+params = {
+    'TimePeriod': {
+        'Start': start.strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'End': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    },
+    'Granularity': 'HOURLY',
+    'Metrics': ['UnblendedCost'],
+    'GroupBy': [{'Type': 'DIMENSION', 'Key': 'SERVICE'}],
+    'Filter': {
+        'And': [
+            {
+                'Dimensions': {
+                    'Key': 'USAGE_TYPE_GROUP',
+                    'Values': ['EC2 Instance Usage']
+                }
             },
-            Granularity='DAILY',
-            Metrics=['UsageQuantity'],
-            Filter={
-                'And': [
-                    {'Dimensions': {'Key': 'USAGE_TYPE_GROUP', 'Values': ['EC2: Running Hours']}},
-                    {'Dimensions': {'Key': 'INSTANCE_TYPE_FAMILY', 'Values': [instance_family]}}
-                ]
+            {
+                'Dimensions': {
+                    'Key': 'OPERATION',
+                    'Values': ['RunInstances']
+                }
             },
-            **kwargs
-        )
+            {
+                'Dimensions': {
+                    'Key': 'LEGAL_ENTITY_NAME',
+                    'Values': ['Amazon Web Services, Inc.']
+                }
+            },
+            {
+                'Dimensions': {
+                    'Key': 'USAGE_TYPE',
+                    'Values': ['BoxUsage']
+                }
+            }
+        ]
+    }
+}
 
-        results += response['ResultsByTime']
+# コスト情報を取得
+response = ce.get_cost_and_usage(**params)
 
-        token = response.get('NextPageToken')
-
-        if not token:
-            break
-
-    total_usage = sum(result['Total']['UsageQuantity']['Amount'] for result in results)
-
-    return total_usage
+# サービスごとのコスト情報を取得
+for result_by_time in response['ResultsByTime']:
+    for group in result_by_time['Groups']:
+        if group['Keys'][0] == 'Amazon Elastic Compute Cloud - Compute':
+            hourly_cost = float(group['Metrics']['UnblendedCost']['Amount']) / 1.0
+            print(f'1時間あたりのオンデマンド利用料は {hourly_cost:.4f} USD です。')
