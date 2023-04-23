@@ -1,11 +1,12 @@
 import boto3
 import os
+from datetime import datetime, timedelta
 
 ce = boto3.client('ce', region_name=os.environ['AWS_REGION'])
 
 def lambda_handler(event, context):
-    start_date = event.get('startDate', '2022-03-01')
-    end_date = event.get('endDate', '2022-03-31')
+    end_date = datetime.utcnow().date()
+    start_date = end_date - timedelta(days=30)
     instance_family = event.get('instanceFamily', 'a1')
 
     results = []
@@ -19,8 +20,8 @@ def lambda_handler(event, context):
         
         response = ce.get_cost_and_usage(
             TimePeriod={
-                'Start': start_date,
-                'End': end_date
+                'Start': start_date.isoformat(),
+                'End': end_date.isoformat()
             },
             Granularity='DAILY',
             Metrics=['UsageQuantity'],
