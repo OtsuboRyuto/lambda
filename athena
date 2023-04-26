@@ -1,0 +1,34 @@
+import boto3
+
+def execute_athena_query(database, query):
+    athena_client = boto3.client('athena')
+
+    response = athena_client.start_query_execution(
+        QueryString=query,
+        QueryExecutionContext={
+            'Database': database
+        },
+        ResultConfiguration={
+            'OutputLocation': 's3://<bucket-name>/query_results/'
+        }
+    )
+
+    execution_id = response['QueryExecutionId']
+    print(f'Execution ID: {execution_id}')
+
+    result_response = athena_client.get_query_results(QueryExecutionId=execution_id)
+
+    # ヘッダーを出力
+    for column_info in result_response['ResultSet']['ResultSetMetadata']['ColumnInfo']:
+        print(f'{column_info["Name"]}: {column_info["Type"]}')
+
+    # データを出力
+    for row in result_response['ResultSet']['Rows']:
+        print('\t'.join([data.get('VarCharValue', '-') for data in row['Data']]))
+
+    return execution_id
+
+def lambda_handler(event, context):
+    database = '<database-name>'
+    query = '<your-sql-query>'
+    execute_athena_query(database, query)
