@@ -13,20 +13,26 @@ def execute_athena_query(database, query):
         }
     )
 
-    execution_id = response['QueryExecutionId']
-    print(f'Execution ID: {execution_id}')
+   
+    state = None
+    while state not in ('FAILED', 'SUCCEEDED', 'CANCELLED'):
+        query_execution = athena_client.get_query_execution(QueryExecutionId=execution_id)
+        state = query_execution['QueryExecution']['Status']['State']
+        print(f'Query execution state: {state}')
+        time.sleep(5)
 
+    if state == 'FAILED':
+        raise Exception(f'Athena query execution failed with status "{state}"')
+    elif state == 'CANCELLED':
+        raise Exception(f'Athena query execution was cancelled with status "{state}"')
+
+    # クエリの実行が成功した場合、結果を取得して出力します。
     result_response = athena_client.get_query_results(QueryExecutionId=execution_id)
-
-    # ヘッダーを出力
-    for column_info in result_response['ResultSet']['ResultSetMetadata']['ColumnInfo']:
-        print(f'{column_info["Name"]}: {column_info["Type"]}')
-
-    # データを出力
     for row in result_response['ResultSet']['Rows']:
         print('\t'.join([data.get('VarCharValue', '-') for data in row['Data']]))
 
     return execution_id
+
 
 def lambda_handler(event, context):
     database = '<database-name>'
