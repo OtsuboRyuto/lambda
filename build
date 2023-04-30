@@ -1,0 +1,5 @@
+  install:
+    commands:
+      - git clone https://github.com/<username>/<repository>.git
+      - git diff-tree --no-commit-id --name-only -r $CODEBUILD_RESOLVED_SOURCE_VERSION $CODEBUILD_SOURCE_VERSION > changed_files.txt
+      - xargs -a changed_files.txt -I{} cp {} /tmp/build/
