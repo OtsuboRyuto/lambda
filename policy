@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowTaggedResourcesOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "s3:GetObject"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": [
+            "CostCenter",
+            "Environment"
+          ]
+        },
+        "StringEquals": {
+          "aws:RequestTag/Environment": [
+            "prod",
+            "dev"
+          ]
+        }
+      }
+    }
+  ]
+}
