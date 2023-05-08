@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Fargate Stack with HTTPS Support"
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+  AppName:
+    Type: String
+  DeploymentGroupName:
+    Type: String
+  ContainerPort:
+    Type: Number
+  CodeBuildProjectArn:
+    Type: String
+  TaskDefinition:
+    Type: String
+  CertificateArn:
+    Type: String
+
+Resources:
+  CodeDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: codedeploy.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForECS"
+
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ApplicationName: !Ref AppName
+
+  CodeDeployDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      DeploymentGroupName: !Ref DeploymentGroupName
+      DeploymentConfigName: CodeDeployDefault.ECSAllAtOnce
+      ServiceRoleArn: !Ref CodeDeployRole
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+          - DEPLOYMENT_FAILURE
+      Deployment:
+        Revision:
+          RevisionType: ECS
+          ECSRevision:
+            TaskDefinition: !Ref TaskDefinition
+            TaskCount: 1
+            LaunchType: FARGATE
+            PlatformVersion: LATEST
+      TriggerConfigurations:
+        - TriggerName: CodeBuildTrigger
+          TriggerEvents:
+            - deploymentStart
+          TriggerTargetArn: !Ref CodeBuildProjectArn
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      Protocol: HTTP
+      Port: !Ref ContainerPort
+      TargetType: ip
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref ContainerPort
+      Protocol: HTTPS
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Join ['', ['fargate-', !Ref "AWS::StackName"]]
+      Scheme: internet-facing
+      Subnets: !Ref SubnetIds
+      SecurityGroups: !Ref SecurityGroup
+
+Outputs:
+  LoadBalancerURL:
+    Description: URL of the load balancer
+    Value: !Join ['', ['https://', !GetAtt LoadBalancer.DNSName]]
