@@ -35,6 +35,10 @@ Parameters:
     Description: User data to be executed on the instance at launch time
     Type: String
     Default: ""
+Conditions:
+  HasBlockDeviceMappings: !Not [!Equals [!Ref BlockDeviceMappings, []]]
+  HasSecurityGroups: !Not [!Equals [!Ref SecurityGroupIds, []]]
+  HasUserData: !Equals [!Ref UserData, ""]    
 Resources:
   MyEC2Instance:
     Type: "AWS::EC2::Instance"
