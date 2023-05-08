@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 instance stack
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+  ImageId:
+    Description: ID of the AMI to launch the instance
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Description: Instance type for the EC2 instance
+    Type: String
+    Default: t2.micro
+    ConstraintDescription: Must be a valid EC2 instance type.
+  BlockDeviceMappings:
+    Description: A list of block device mappings for the instance
+    Type: List<AWS::EC2::BlockDeviceMapping>
+    Default: []
+  SecurityGroupIds:
+    Description: A list of security group IDs to associate with the instance
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Default: []
+  SubnetId:
+    Description: ID of the subnet in which to launch the instance
+    Type: AWS::EC2::Subnet::Id
+  AssociatePublicIpAddress:
+    Description: Associates a public IP address with the instance
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+  UserData:
+    Description: User data to be executed on the instance at launch time
+    Type: String
+    Default: ""
+Resources:
+  MyEC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings: !If [HasBlockDeviceMappings, !Ref BlockDeviceMappings, !Ref "AWS::NoValue"]
+      SecurityGroupIds: !If [HasSecurityGroups, !Ref SecurityGroupIds, !Ref "AWS::NoValue"]
+      SubnetId: !Ref SubnetId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: !If [AssociatePublicIpAddress, "true", "false"]
+          DeviceIndex: "0"
+          GroupSet: !If [HasSecurityGroups, !Ref SecurityGroupIds, !Ref "AWS::NoValue"]
+          SubnetId: !Ref SubnetId
+      UserData: !If [HasUserData, !Base64 !Sub "${UserData}\n", !Ref "AWS::NoValue"]
+  EC2InstanceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  EC2InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles:
+        - !Ref EC2InstanceRole
