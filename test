@@ -1,0 +1,1 @@
+aws ec2 describe-instances --filters --query "Reservations[].Instances[].{InstanceId:InstanceId, State:State.Name,Name:Tags[?Key=='Name']|[0].Value, Environment:Tags[?Key=='Environment']|[0].Value}"
