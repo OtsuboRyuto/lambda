@@ -1,0 +1,2 @@
+Monitor Name,Query,Threshold,Tags
+SSHD Process Monitor,avg(last_3d):max:system.processes.number{process_name:sshd}.as_count(),3,"process:sshd"
