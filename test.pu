@@ -1,0 +1,23 @@
+@startuml
+!pragma useVerticalIf on
+start
+
+
+- WebサーバでHttpd停止
+- Datadog Agentが停止を検知し、アラートをAWS API Gatewayへ送出
+- AWS API GatewayがAWS Lambdaを起動
+- AWS lambda(1)がアラートレベルに応じて下記対応を実施
+
+if ("アラートレベル" == "Critical") then (true)
+  - AWS Lambda(1)がBackLogへ課題を登録するLambdaを起動
+  - インフラチームへ障害対応の電話をかけるLambdaを起動
+  - AWS Lambda(1)がteamsへアラートを送出
+  - AWS Lambdaが事前に定義された自動復旧を実施
+else if ("アラートレベル" == "Warning") then (true)
+  - AWS Lambda(1)がteamsへアラートを送出
+  - AWS Lambda(1)がBackLogへ課題を登録するLambdaを起動
+endif
+- Datadogのログやメトリクスを確認し、恒久対策を実施する
+
+stop
+@enduml
