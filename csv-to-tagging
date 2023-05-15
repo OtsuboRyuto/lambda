@@ -1,0 +1,34 @@
+import csv
+import boto3
+
+def tag_ec2_instance(instance_id, tags):
+    ec2_client = boto3.client('ec2', region_name='<REGION>', aws_access_key_id='<AWS_ACCESS_KEY>', aws_secret_access_key='<AWS_SECRET_KEY>')
+    
+    response = ec2_client.create_tags(
+        Resources=[instance_id],
+        Tags=tags
+    )
+    
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        print(f"Tags successfully added to instance: {instance_id}")
+    else:
+        print(f"Failed to add tags to instance: {instance_id}")
+
+def main():
+    with open('<CSV_FILE_PATH>', 'r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        
+        for row in csv_reader:
+            instance_id = row['instanceId']
+            tags = [
+                {'Key': 'Owner', 'Value': row['Owner']},
+                {'Key': 'Project', 'Value': row['Project']},
+                {'Key': 'Consul', 'Value': row['Consul']},
+                {'Key': 'Environment', 'Value': row['Environment']},
+                {'Key': 'Name', 'Value': row['Name']}
+            ]
+            
+            tag_ec2_instance(instance_id, tags)
+
+if __name__ == '__main__':
+    main()
