@@ -1,0 +1,19 @@
+def get_instance_id_from_hostname(hostname):
+    ec2_client = boto3.client('ec2')
+    
+    response = ec2_client.describe_instances(
+        Filters=[
+            {
+                'Name': 'private-dns-name',
+                'Values': [hostname]
+            }
+        ]
+    )
+    
+    if 'Reservations' in response and len(response['Reservations']) > 0:
+        instances = response['Reservations'][0]['Instances']
+        if instances and len(instances) > 0:
+            instance_id = instances[0]['InstanceId']
+            return instance_id
+    
+    return None
