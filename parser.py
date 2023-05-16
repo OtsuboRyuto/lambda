@@ -1,7 +1,7 @@
 import re
 import sys
 def parse_string(string):
-    pattern = r'\$\(.*?\)'
+    pattern = r'#{(.*?)}'
     matches = re.findall(pattern, string)
     results = [match[2:-1] for match in matches]
     return results
