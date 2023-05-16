@@ -1,0 +1,54 @@
+  MyRestApi:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: MyAPIGateway
+
+  MyAuthorizer:
+    Type: "AWS::ApiGateway::Authorizer"
+    Properties:
+      Name: MyAuthorizer
+      Type: BASIC_AUTH
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref MyRestApi
+      AuthorizerCredentials: !GetAtt MyBasicAuthRole.Arn
+      AuthorizerResultTtlInSeconds: 300
+
+  MyBasicAuthRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: BasicAuthPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource:
+                  - "arn:aws:execute-api:*:*:*/*"
+
+  MyDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    Properties:
+      RestApiId: !Ref MyRestApi
+
+  MyStage:
+    Type: "AWS::ApiGateway::Stage"
+    Properties:
+      StageName: Prod
+      DeploymentId: !Ref MyDeployment
+      RestApiId: !Ref MyRestApi
+      MethodSettings:
+        - HttpMethod: "*"
+          ResourcePath: "/*"
+          AuthorizationType: "CUSTOM"
+          AuthorizerId: !Ref MyAuthorizer
