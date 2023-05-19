@@ -1,6 +1,33 @@
 import csv
 import boto3
 
+
+def check_instance_tag(instance_id, tag_key, tag_value):
+    # AWSクレデンシャル情報の設定
+    session = boto3.Session(
+        aws_access_key_id='YOUR_ACCESS_KEY',
+        aws_secret_access_key='YOUR_SECRET_ACCESS_KEY',
+        region_name='YOUR_REGION'
+    )
+
+    # EC2クライアントの作成
+    ec2_client = session.client('ec2')
+
+    # インスタンスの情報を取得
+    response = ec2_client.describe_instances(InstanceIds=[instance_id])
+    reservations = response['Reservations']
+
+    # 指定したタグが付いているか確認
+    for reservation in reservations:
+        for instance in reservation['Instances']:
+            tags = instance.get('Tags', [])
+            for tag in tags:
+                if tag['Key'] == tag_key and tag['Value'] == tag_value:
+                    return True
+
+    return False
+
+
 def tag_ec2_instance(instance_id, tags):
     ec2_client = boto3.client('ec2', region_name='<REGION>', aws_access_key_id='<AWS_ACCESS_KEY>', aws_secret_access_key='<AWS_SECRET_KEY>')
     
