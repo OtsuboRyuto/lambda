@@ -1,0 +1,38 @@
+{
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "ap-northeast-1",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "CentOS 7.*x86_64*"
+        },
+        "owners": ["aws-marketplace"],
+        "most_recent": true
+      },
+      "instance_type": "t2.micro",
+      "ssh_username": "centos",
+      "ami_name": "logstash-ami-{{timestamp}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "sudo yum -y install java-11-openjdk-devel",
+        "sudo rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch",
+        "sudo echo '[logstash-7.x]' | sudo tee /etc/yum.repos.d/logstash.repo",
+        "sudo echo 'name=Elastic repository for 7.x packages' | sudo tee -a /etc/yum.repos.d/logstash.repo",
+        "sudo echo 'baseurl=https://artifacts.elastic.co/packages/7.x/yum' | sudo tee -a /etc/yum.repos.d/logstash.repo",
+        "sudo echo 'gpgcheck=1' | sudo tee -a /etc/yum.repos.d/logstash.repo",
+        "sudo echo 'gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch' | sudo tee -a /etc/yum.repos.d/logstash.repo",
+        "sudo echo 'enabled=1' | sudo tee -a /etc/yum.repos.d/logstash.repo",
+        "sudo yum -y install logstash",
+        "sudo systemctl enable logstash",
+        "sudo yum -y install https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm",
+        "sudo systemctl enable amazon-ssm-agent"
+      ]
+    }
+  ]
+}
