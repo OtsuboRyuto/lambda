@@ -1,0 +1,16 @@
+import sys
+import json
+
+def parse_json(json_string):
+    try:
+        json_dict = json.loads(json_string)
+        return json_dict
+    except ValueError as e:
+        print("Invalid JSON format:", e)
+        return None
+
+# コマンドライン引数からJSON文字列を受け取る
+json_string = sys.argv[1]
+
+# JSON文字列を辞書としてパースする
+parsed_dict = parse_json(json_string)
