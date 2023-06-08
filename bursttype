@@ -1,0 +1,1 @@
+aws ec2 describe-instance-types --region <リージョン名> --filters "Name=current-generation,Values=true" "Name=instance-type,Values=t2.*" "Name=burstable-performance-supported,Values=true" "Name=instance-type-credit-specification.value,Values=standard" --query "InstanceTypes[].InstanceType" --output text
