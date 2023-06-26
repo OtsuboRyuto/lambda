@@ -15,17 +15,11 @@ def lambda_handler(event, context):
 
     # 署名の検証
     if client_signature == calculated_signature:
-        response = {
-            'statusCode': 200,
-            'body': 'Authentication successful'
-        }
+        policy = generate_policy("user_id", "Allow", event['methodArn'])
     else:
-        response = {
-            'statusCode': 401,
-            'body': 'Authentication failed'
-        }
+        policy = generate_policy("user_id", "Deny", event['methodArn'])
 
-    return response
+    return policy
 
 
 def create_hmac_signature(secret_key, data):
@@ -34,3 +28,25 @@ def create_hmac_signature(secret_key, data):
     calculated_signature = signature.hexdigest()
 
     return calculated_signature
+
+
+def generate_policy(principal_id, effect, resource):
+    # IAMポリシードキュメントを生成
+    policy_document = {
+        'Version': '2012-10-17',
+        'Statement': [
+            {
+                'Action': 'execute-api:Invoke',
+                'Effect': effect,
+                'Resource': resource
+            }
+        ]
+    }
+
+    # API Gateway用のポリシーステートメントを生成
+    policy_statement = {
+        'principalId': principal_id,
+        'policyDocument': policy_document
+    }
+
+    return policy_statement
