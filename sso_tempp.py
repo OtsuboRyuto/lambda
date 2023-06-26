@@ -45,3 +45,21 @@ instance_arn = 'arn:aws:sso:::instance/xxxxxxxxxxxxxxxxxxxxxx'
 assigned_permission_set_arn = assign_permission_set_to_account(permission_set_arn, account_id, instance_arn)
 
 print(f'Permission set assigned: {assigned_permission_set_arn}')
+
+import boto3
+
+def get_instance_arn_by_user_name(user_name):
+    client = boto3.client('sso-admin')
+
+    response = client.listInstances()
+
+    for instance in response['Instances']:
+        response = client.listUsers(
+            InstanceArn=instance['Arn']
+        )
+
+        for user in response['Users']:
+            if user['UserName'] == user_name:
+                return instance['Arn']
+
+    return None
