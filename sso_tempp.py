@@ -1,65 +1,36 @@
-import boto3
+import hashlib
+import hmac
+import json
 
-def invoke_step_function(state_machine_arn, input_data):
-    client = boto3.client('stepfunctions')
+def lambda_handler(event, context):
+    # 共有の秘密鍵
+    secret_key = "your_shared_secret_key"
 
-    response = client.start_execution(
-        stateMachineArn=state_machine_arn,
-        input=input_data
-    )
+    # リクエストヘッダーから必要な情報を取得
+    client_signature = event['headers'].get('X-HMAC-Signature')
+    request_body = event['body']
 
-    return response['executionArn']
+    # 署名の作成
+    calculated_signature = create_hmac_signature(secret_key, request_body)
 
+    # 署名の検証
+    if client_signature == calculated_signature:
+        response = {
+            'statusCode': 200,
+            'body': 'Authentication successful'
+        }
+    else:
+        response = {
+            'statusCode': 401,
+            'body': 'Authentication failed'
+        }
 
-# 設定
-state_machine_arn = 'arn:aws:states:us-east-1:123456789012:stateMachine:MyStateMachine'
-input_data = '{"key1": "value1", "key2": "value2"}'
-
-# Step Functionsの呼び出し
-execution_arn = invoke_step_function(state_machine_arn, input_data)
-
-print(f'Started Step Functions execution: {execution_arn}')
-
-
-import boto3
-
-def assign_permission_set_to_account(permission_set_arn, account_id, instance_arn):
-    client = boto3.client('sso-admin')
-
-    response = client.attachManagedPolicyToPermissionSet(
-        InstanceArn=instance_arn,
-        PermissionSetArn=permission_set_arn,
-        TargetId=account_id,
-        TargetType='AWS_ACCOUNT'
-    )
-
-    return response['PermissionSetArn']
+    return response
 
 
-# 設定
-permission_set_arn = 'arn:aws:sso:::permissionSet/xxxxxxxxxxxxxxxxxxxxxx'
-account_id = '123456789012'
-instance_arn = 'arn:aws:sso:::instance/xxxxxxxxxxxxxxxxxxxxxx'
+def create_hmac_signature(secret_key, data):
+    # HMAC-SHA256を使用して署名を作成
+    signature = hmac.new(secret_key.encode('utf-8'), data.encode('utf-8'), hashlib.sha256)
+    calculated_signature = signature.hexdigest()
 
-# 許可セットの割り当て
-assigned_permission_set_arn = assign_permission_set_to_account(permission_set_arn, account_id, instance_arn)
-
-print(f'Permission set assigned: {assigned_permission_set_arn}')
-
-import boto3
-
-def get_instance_arn_by_user_name(user_name):
-    client = boto3.client('sso-admin')
-
-    response = client.listInstances()
-
-    for instance in response['Instances']:
-        response = client.listUsers(
-            InstanceArn=instance['Arn']
-        )
-
-        for user in response['Users']:
-            if user['UserName'] == user_name:
-                return instance['Arn']
-
-    return None
+    return calculated_signature
