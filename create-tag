@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowLowerCaseTags",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestTag/Name": "${aws:RequestTag/Name/regex('^[a-z]+$')}"
+        }
+      }
+    }
+  ]
+}
+
+Amazon EC2 : ec2:CreateTags
+Amazon RDS : rds:AddTagsToResource
+Amazon S3 : s3:PutBucketTagging, s3:PutObjectTagging
+AWS Lambda : lambda:TagResource
+Amazon DynamoDB : dynamodb:TagResource
+AWS Step Functions : states:TagResource
+Amazon SNS : sns:TagResource
+Amazon SQS : sqs:TagQueue
+Amazon ECS : ecs:TagResource
+Amazon EKS : eks:TagResource
+AWS CloudFormation : cloudformation:TagResource
+Amazon CloudWatch : cloudwatch:TagResource
